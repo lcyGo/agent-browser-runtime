@@ -22,6 +22,7 @@ Commercial use, resale, commercial hosted service use, paid product integration,
 
 - Broker: Node/Fastify HTTP + WebSocket control plane for leases, jobs, artifacts, pacing, and state.
 - Browser runtime: Chromium/Chrome in Docker with CDP, Xvfb, x11vnc, noVNC, and a persistent profile mount.
+- TLS gateway: local HTTP proxy service wired into Chromium at launch time, with gateway health/stats surfaced by the broker.
 - Companion extension: Chrome extension that owns real tabs, real Tab Groups, debugger/CDP calls, screenshots, HTML capture, session probes, and humanized primitives.
 - CLI: `./cli/brs.js` for status, fetch, session probes, extractor jobs, artifacts, and leases.
 - Skills: Codex and OpenClaw compatible skill folders under `skills/`.
@@ -48,9 +49,9 @@ Quick manual checks:
 ./cli/brs.js fetch https://example.com --agent demo-agent --task smoke --screenshot --humanize enhanced
 ```
 
-Expected outputs: broker status, HTML artifact, screenshot artifact, and a real Chrome Tab Group visible in noVNC.
+Expected outputs: broker status, TLS gateway health, HTML artifact, screenshot artifact, and a real Chrome Tab Group visible in noVNC.
 
-`./cli/brs.js status` also reports `stealth.enabled`, fingerprint header/patch toggles, and whether the optional TLS gateway proxy is configured.
+`./cli/brs.js status` also reports `stealth.enabled`, fingerprint header/patch toggles, and whether the startup-level TLS gateway proxy is configured and active.
 It now also reports the loaded runtime fingerprint summary from the extension, including generated UA family, UA-CH header keys, platform, WebGL, and hardware-surface values.
 The `BRS_*` environment prefix is kept as the stable Browser Runtime Service config surface.
 
@@ -67,7 +68,7 @@ The runtime has a default-on anti-bot/risk-control compatibility layer so browse
 - Main-world stealth patching at `document_start`: webdriver, languages, platform, vendor, plugins/mimeTypes, Chrome runtime stubs, permissions, media codecs, WebGL, canvas, and audio surfaces.
 - Canvas/audio noise controls and explicit WebGL/user-agent/platform overrides for compatibility testing.
 - Platform cooldowns plus per-job humanized warmup, mousemove, scroll, and pause primitives.
-- Optional proxy/TLS-gateway integration with QUIC disabled on the proxied path and health/stats surfacing in `status`.
+- Startup-level proxy/TLS-gateway integration with QUIC disabled on the proxied path and health/stats surfacing in `status`.
 - High-trust login-host exclusions through `BRS_STEALTH_EXCLUDED_HOSTS`; `accounts.google.com` is excluded by default because spoofing can harm account login flows.
 
 This is compatibility infrastructure for legitimate real-browser agent work, not a promise that any platform will accept automation. Use noVNC for login, Captcha, slider, or account-safety handoff.
@@ -96,10 +97,11 @@ Default host CDP port is `19223` to avoid conflicts with other local browser ser
 ## Files
 
 - `docs/SPEC.md` — architecture and API spec
-- `docker-compose.yml` — broker + chrome-runtime
+- `docker-compose.yml` — tls-gateway + broker + chrome-runtime
 - `broker/` — HTTP/WS control plane
 - `extension/` — Chrome companion extension for real Tab Groups + debugger CDP
 - `runtime/chrome/` — Chromium + noVNC container
+- `tls-gateway/` — local gateway service used by Chromium's startup proxy path
 - `cli/brs.js` — small operator/client CLI
 - `scripts/smoke-test.sh` — full local runtime regression test
 - `extractors/` — generic extractor scripts with optional params schema

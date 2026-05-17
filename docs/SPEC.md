@@ -17,6 +17,7 @@ Docker Compose owns the runtime:
 
 ```text
 agent-browser-runtime
+├─ tls-gateway     # startup-level browser proxy + health/stats
 ├─ broker          # HTTP/WS control plane, lease/job/artifacts/state
 └─ chrome-runtime  # Chromium + noVNC + persistent profile + companion extension
 ```
@@ -71,7 +72,7 @@ Default capabilities:
 - `BRS_LOCALE`, `BRS_STEALTH_TIMEZONE`, `BRS_USER_AGENT`, `BRS_PLATFORM`, `BRS_WEBGL_VENDOR`, and `BRS_WEBGL_RENDERER`: optional explicit profile overrides.
 - `BOT_HUMANIZE_LEVEL` and per-job `--humanize`: task-level pacing, mousemove, scroll, and pauses.
 - `BRS_PLATFORM_COOLDOWN_ENABLED=1`: platform-level cooldown defaults cover common high-friction social surfaces (`reddit=45s`, `facebook=60s`, `linkedin=180s`, `instagram=240s`, manual challenge `300s`).
-- `BRS_TLS_GATEWAY_ENABLED=1`: TLS gateway capability is enabled by default, but it is only active when `BRS_TLS_GATEWAY_PROXY_SERVER` points at a real proxy/gateway. When active, Chromium receives `--proxy-server` and `--disable-quic`. Status can read gateway health/stats with `BRS_TLS_GATEWAY_BASE_URL`, `BRS_TLS_GATEWAY_HEALTH_URL`, or `BRS_TLS_GATEWAY_STATS_URL`.
+- `BRS_TLS_GATEWAY_ENABLED=1`: TLS gateway capability is enabled by default. The compose stack includes `tls-gateway`, and `BRS_TLS_GATEWAY_PROXY_SERVER` defaults to `http://tls-gateway:8080`, so Chromium receives `--proxy-server` and `--disable-quic` before startup unless a caller overrides or disables it. Status reads gateway health/stats with `BRS_TLS_GATEWAY_BASE_URL`, `BRS_TLS_GATEWAY_HEALTH_URL`, or `BRS_TLS_GATEWAY_STATS_URL`.
 
 The default profile is `BRS_STEALTH_PROFILE=standard`. Set `BRS_STEALTH_ENABLED=0` for debugging or site compatibility isolation.
 

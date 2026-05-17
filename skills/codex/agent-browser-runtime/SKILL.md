@@ -30,8 +30,8 @@ Endpoints:
 - If `extensionConnected` stays false, restart with `docker compose up --build -d`.
 - Agents must use broker leases; one lease maps to one real Chrome Tab Group.
 - Broker persists state/artifacts and owns task-level pacing; the extension executes Chrome-native browser operations, including scripted humanized mouse/scroll/pause actions.
-- Browser consistency policy is default-on: seed-based fingerprint profile, UA/UA-CH headers, main-world stealth evasions, locale/timezone CDP overrides, and optional TLS gateway proxy support through `BRS_*` env vars.
-- `./cli/brs.js status` should show `stealth.enabled: true`, `stealth.fingerprint.generated: true`, and `platformPacing`.
+- Browser consistency policy is default-on: seed-based fingerprint profile, UA/UA-CH headers, main-world stealth evasions, locale/timezone CDP overrides, startup-level TLS gateway proxy, and pacing through `BRS_*` env vars.
+- `./cli/brs.js status` should show `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing`.
 - Keep at least 70 ms between broker-driven browser requests. For unknown or sensitive platforms, serialize per target site and use seconds-to-minutes cooldowns.
 - Use `./cli/brs.js probe-session <platform>` to check persisted login/session state for `linkedin`, `reddit`, `facebook`, `instagram`, or `generic`; cookie values are omitted unless `--include-cookies` is passed.
 - For direct CDP legacy/debug tasks, do not use `context.pages()[0]`; create a dedicated page for the task, keep ownership explicit, and close/release it when finished.

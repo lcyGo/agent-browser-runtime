@@ -131,9 +131,18 @@ if status.get('stealth', {}).get('fingerprint', {}).get('generated') is not True
     raise SystemExit(f"generated fingerprint missing: {status.get('stealth')}")
 if status.get('platformPacing', {}).get('enabled') is not True:
     raise SystemExit(f"platform pacing missing: {status.get('platformPacing')}")
+tls = status.get('tlsGateway') or {}
+stealth_tls = status.get('stealth', {}).get('tlsGateway') or {}
+if tls.get('enabled') is not True or tls.get('proxyConfigured') is not True:
+    raise SystemExit(f"TLS gateway not configured: {tls}")
+if tls.get('active') is not True or stealth_tls.get('active') is not True:
+    raise SystemExit(f"TLS gateway not active: tls={tls} stealth={stealth_tls}")
+if (tls.get('health') or {}).get('ok') is not True:
+    raise SystemExit(f"TLS gateway health missing: {tls}")
 print('extensionConnected=true')
 print('humanize=', status.get('humanize'))
 print('stealth=', status.get('stealth'))
+print('tlsGateway=', status.get('tlsGateway'))
 print('activeLeases=', len(status.get('leases') or []))
 PY
 

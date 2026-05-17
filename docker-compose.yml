@@ -1,6 +1,30 @@
 name: agent-browser-runtime
 
 services:
+  tls-gateway:
+    build:
+      context: ./tls-gateway
+    container_name: agent-browser-runtime-tls-gateway
+    init: true
+    environment:
+      LISTEN_ADDR: 0.0.0.0:8080
+      LOG_LEVEL: ${BRS_TLS_GATEWAY_LOG_LEVEL:-info}
+      JA3_PROFILE: ${BRS_TLS_GATEWAY_PROFILE:-Chrome-124-macOS}
+      ENABLE_SESSIONS: ${BRS_TLS_GATEWAY_ENABLE_SESSIONS:-true}
+      SESSION_TTL: ${BRS_TLS_GATEWAY_SESSION_TTL:-1h}
+      SESSION_ROUTING_POLICY: ${BRS_TLS_GATEWAY_SESSION_ROUTING_POLICY:-sticky}
+      OUTBOUND_IPS: ${BRS_TLS_GATEWAY_OUTBOUND_IPS:-}
+      ENABLE_PROXY_CHAIN: ${BRS_TLS_GATEWAY_ENABLE_PROXY_CHAIN:-false}
+      PROXY_CHAIN: ${BRS_TLS_GATEWAY_PROXY_CHAIN:-}
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
   broker:
     build:
       context: ./broker
@@ -34,8 +58,8 @@ services:
       BRS_STEALTH_TIMEZONE: ${BRS_STEALTH_TIMEZONE:-}
       BRS_EXTRA_HTTP_HEADERS_JSON: ${BRS_EXTRA_HTTP_HEADERS_JSON:-}
       BRS_TLS_GATEWAY_ENABLED: ${BRS_TLS_GATEWAY_ENABLED:-1}
-      BRS_TLS_GATEWAY_PROXY_SERVER: ${BRS_TLS_GATEWAY_PROXY_SERVER:-}
-      BRS_TLS_GATEWAY_BASE_URL: ${BRS_TLS_GATEWAY_BASE_URL:-}
+      BRS_TLS_GATEWAY_PROXY_SERVER: ${BRS_TLS_GATEWAY_PROXY_SERVER:-http://tls-gateway:8080}
+      BRS_TLS_GATEWAY_BASE_URL: ${BRS_TLS_GATEWAY_BASE_URL:-http://tls-gateway:8080}
       BRS_TLS_GATEWAY_HEALTH_URL: ${BRS_TLS_GATEWAY_HEALTH_URL:-}
       BRS_TLS_GATEWAY_STATS_URL: ${BRS_TLS_GATEWAY_STATS_URL:-}
       BRS_TLS_GATEWAY_HEALTH_PATH: ${BRS_TLS_GATEWAY_HEALTH_PATH:-/health}
@@ -48,6 +72,8 @@ services:
     ports:
       - "127.0.0.1:${BROKER_HOST_PORT:-17890}:17890"
     depends_on:
+      tls-gateway:
+        condition: service_healthy
       chrome-runtime:
         condition: service_started
     healthcheck:
@@ -78,7 +104,7 @@ services:
       BOT_RUNTIME_SIGNATURE: ${BOT_RUNTIME_SIGNATURE:-agent-browser-runtime:v11-profile-preserve-extension-refresh}
       BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE: ${BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE:-0}
       BROWSER_PROXY_SERVER: ${BROWSER_PROXY_SERVER:-}
-      BROWSER_PROXY_BYPASS_LIST: ${BROWSER_PROXY_BYPASS_LIST:-127.0.0.1,localhost,::1,broker,chrome-runtime}
+      BROWSER_PROXY_BYPASS_LIST: ${BROWSER_PROXY_BYPASS_LIST:-127.0.0.1,localhost,::1,broker,chrome-runtime,tls-gateway}
       BROWSER_RUNTIME_BROKER_WS: ${BROWSER_RUNTIME_BROKER_WS:-ws://broker:17890/extension}
       BROWSER_EXTENSION_DIR: /opt/browser-runtime-extension
       BRS_STEALTH_ENABLED: ${BRS_STEALTH_ENABLED:-1}
@@ -104,7 +130,7 @@ services:
       BRS_WEBGL_RENDERER: ${BRS_WEBGL_RENDERER:-}
       BRS_EXTRA_HTTP_HEADERS_JSON: ${BRS_EXTRA_HTTP_HEADERS_JSON:-}
       BRS_TLS_GATEWAY_ENABLED: ${BRS_TLS_GATEWAY_ENABLED:-1}
-      BRS_TLS_GATEWAY_PROXY_SERVER: ${BRS_TLS_GATEWAY_PROXY_SERVER:-}
+      BRS_TLS_GATEWAY_PROXY_SERVER: ${BRS_TLS_GATEWAY_PROXY_SERVER:-http://tls-gateway:8080}
     volumes:
       - ./runtime/profile:/data/user-data
       - ./extension:/opt/browser-runtime-extension:ro
@@ -112,6 +138,9 @@ services:
     ports:
       - "127.0.0.1:${CDP_HOST_PORT:-19223}:19222"
       - "127.0.0.1:${NOVNC_HOST_PORT:-16080}:6080"
+    depends_on:
+      tls-gateway:
+        condition: service_healthy
     restart: unless-stopped
 
 networks:

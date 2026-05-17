@@ -12,6 +12,9 @@ broker container  <-------------------->  chrome companion extension
         |                                      | chrome.tabs.group / tabGroups / debugger
         v                                      v
 SQLite state + artifacts            chrome-runtime: Chromium + noVNC + persistent profile
+        ^
+        |
+tls-gateway: startup-level browser proxy + health/stats
 ```
 
 ## Services
@@ -27,6 +30,14 @@ Responsibilities:
 - runtime status: sanitized extension-loaded fingerprint config, platform pacing policy, and optional TLS gateway health/stats
 - artifact writing under `artifacts/YYYY-MM-DD/<leaseId>/`
 
+### tls-gateway
+
+Responsibilities:
+
+- provide a local HTTP proxy endpoint for Chromium startup proxy configuration
+- keep gateway health and stats available to the broker
+- support session tracking, optional outbound IP assignment, and optional proxy-chain configuration
+
 ### chrome-runtime
 
 Responsibilities:
@@ -36,7 +47,7 @@ Responsibilities:
 - loads `extension/` at browser launch
 - generates `runtime-config.js` from `BRS_*` env vars for the companion extension
 - generates a coherent seed-based fingerprint profile unless `BRS_GENERATE_FINGERPRINT_ENABLED=0`
-- applies an optional proxy/TLS gateway when `BRS_TLS_GATEWAY_PROXY_SERVER` is set and disables QUIC for that proxied path
+- applies the startup-level proxy/TLS gateway when `BRS_TLS_GATEWAY_PROXY_SERVER` is set and disables QUIC for that proxied path
 - exposes an internal CDP proxy for diagnostics; the MVP control path uses the extension debugger API for page ops
 
 ### companion extension

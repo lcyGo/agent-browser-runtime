@@ -33,6 +33,7 @@ Expected endpoints:
 - Broker: `http://127.0.0.1:17890`
 - CDP proxy: `http://127.0.0.1:19223`
 - noVNC: `http://127.0.0.1:16080/vnc.html?autoconnect=true&resize=remote`
+- TLS gateway: `http://tls-gateway:8080` inside compose, surfaced through `./cli/brs.js status`
 
 ## Verification
 
@@ -42,7 +43,7 @@ Expected endpoints:
 ./cli/brs.js extract example.extract.js https://example.com --agent deploy-check --task extractor-smoke --screenshot --save-html
 ```
 
-`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, and `platformPacing.enabled: true`.
+`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing.enabled: true`.
 
 ## Repair Loop
 

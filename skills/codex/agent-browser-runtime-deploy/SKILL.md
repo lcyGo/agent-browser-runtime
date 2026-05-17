@@ -29,6 +29,7 @@ Expected endpoints:
 - Broker: `http://127.0.0.1:17890`
 - CDP proxy: `http://127.0.0.1:19223`
 - noVNC: `http://127.0.0.1:16080/vnc.html?autoconnect=true&resize=remote`
+- TLS gateway: `http://tls-gateway:8080` inside compose, surfaced through `./cli/brs.js status`
 
 ## Verification
 
@@ -40,7 +41,7 @@ Run:
 ./cli/brs.js extract example.extract.js https://example.com --agent deploy-check --task extractor-smoke --screenshot --save-html
 ```
 
-`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, and `platformPacing.enabled: true`.
+`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing.enabled: true`.
 
 ## Operating Rules
 
@@ -61,6 +62,7 @@ Agent Browser Runtime intentionally exposes its anti-bot/risk-control browser co
 - `BRS_CANVAS_NOISE_ENABLED`
 - `BRS_AUDIO_NOISE_ENABLED`
 - `BRS_TLS_GATEWAY_PROXY_SERVER`
+- `BRS_TLS_GATEWAY_BASE_URL`
 - `BOT_HUMANIZE_LEVEL`
 
 Set `BRS_STEALTH_ENABLED=0` for debugging a site compatibility issue. Set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only when an intentional clean browser profile is required.
