@@ -56,7 +56,7 @@ The `BRS_*` environment prefix is kept as the stable Browser Runtime Service con
 
 ## Anti-bot and browser-consistency stack
 
-Agent Browser Runtime does not hide what it is doing. The runtime has a default-on anti-bot/risk-control compatibility layer so browser automation looks internally coherent across launch args, request headers, JS-visible surfaces, pacing, and manual handoff.
+The runtime has a default-on anti-bot/risk-control compatibility layer so browser automation looks internally coherent across launch args, request headers, JS-visible surfaces, pacing, and manual handoff.
 
 - Real browser runtime instead of pure headless fetches.
 - Persistent Chrome profile for login-state reuse, cookies, localStorage, and extension state.
