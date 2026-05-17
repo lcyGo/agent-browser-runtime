@@ -51,6 +51,8 @@ Expected endpoints:
 
 `status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing.enabled: true`.
 
+The default browser identity preset is `BRS_RUNTIME_PRESET=chrome124-macos`; it applies across regular browser work unless overridden.
+
 ## Repair Loop
 
 1. `docker compose ps`

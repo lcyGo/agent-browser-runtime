@@ -63,7 +63,7 @@ The runtime has a default-on browser consistency layer. It is intended to make r
 Default capabilities:
 
 - `BRS_GENERATE_FINGERPRINT_ENABLED=1`: derive a coherent browser identity from `BRS_FINGERPRINT_SEED` or `FINGERPRINT_SEED`.
-- `BRS_RUNTIME_PRESET=linkedin`: default browser identity preset aligns TLS gateway, UA/UA-CH, navigator platform, timezone, and WebGL around a Chrome 124 macOS profile unless explicitly overridden.
+- `BRS_RUNTIME_PRESET=chrome124-macos`: default browser identity preset aligns TLS gateway, UA/UA-CH, navigator platform, timezone, and WebGL around a Chrome 124 macOS profile unless explicitly overridden. It is a browser identity preset, not a target-site label.
 - `docker-compose.fingerprint.yml`: optional overlay that mounts a host `fingerprint-chromium` directory at `/opt/fingerprint-chromium`; when `chrome-wrapper` or `chrome` is present, Chromium startup uses that binary with `--fingerprint` and reports it through `status.browserRuntime`.
 - Generated identity includes user agent, UA-CH metadata and headers, `Accept-Language`, navigator platform, WebGL vendor/renderer, hardware concurrency, device memory, and touch points.
 - Chromium major/full version is detected from the runtime binary by default. `BRS_CHROME_MAJOR` and `BRS_CHROME_FULL_VERSION` intentionally override the detected version when set.
@@ -76,7 +76,7 @@ Default capabilities:
 - `BRS_PLATFORM_COOLDOWN_ENABLED=1`: platform-level cooldown defaults cover common high-friction social surfaces (`reddit=45s`, `facebook=60s`, `linkedin=180s`, `instagram=240s`, manual challenge `300s`).
 - `BRS_TLS_GATEWAY_ENABLED=1`: TLS gateway capability is enabled by default. The compose stack includes `tls-gateway`, and `BRS_TLS_GATEWAY_PROXY_SERVER` defaults to `http://tls-gateway:8080`, so Chromium receives `--proxy-server` and `--disable-quic` before startup unless a caller overrides or disables it. Status reads gateway health/stats with `BRS_TLS_GATEWAY_BASE_URL`, `BRS_TLS_GATEWAY_HEALTH_URL`, or `BRS_TLS_GATEWAY_STATS_URL`.
 
-The default profile is `BRS_STEALTH_PROFILE=standard`. Set `BRS_STEALTH_ENABLED=0` for debugging or site compatibility isolation.
+The default profile is `BRS_STEALTH_PROFILE=chrome124-macos`. Set `BRS_STEALTH_ENABLED=0` for debugging or site compatibility isolation.
 
 Profile reset policy: `BOT_RUNTIME_SIGNATURE` changes no longer wipe the persisted browser profile by default. Set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` when you intentionally want a clean profile after changing low-level browser identity settings.
 

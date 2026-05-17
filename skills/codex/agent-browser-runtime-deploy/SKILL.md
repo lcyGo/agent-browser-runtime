@@ -61,6 +61,7 @@ Run:
 
 Agent Browser Runtime intentionally exposes its anti-bot/risk-control browser consistency layer:
 
+- `BRS_RUNTIME_PRESET`
 - `BRS_GENERATE_FINGERPRINT_ENABLED`
 - `BRS_FINGERPRINT_CHROMIUM_HOST_PATH`
 - `BRS_FINGERPRINT_HEADERS_ENABLED`
