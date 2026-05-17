@@ -93,14 +93,6 @@ Use `--include-storage-state` only when you intentionally need a Playwright-styl
 
 Default host CDP port is `19223` to avoid conflicts with other local browser services.
 
-## Public release boundary
-
-The repository is designed to be publishable as a generic runtime package:
-
-- Tracked: runtime code, docs, generic extractor examples, `.env.example`, and agent skills.
-- Ignored: `.env`, SQLite state, artifacts, screenshots, traces, and persisted Chrome profile data.
-- Excluded: private site extractors, customer/project-specific workflows, account cookies, credentials, and harvested content.
-
 ## Files
 
 - `docs/SPEC.md` — architecture and API spec
