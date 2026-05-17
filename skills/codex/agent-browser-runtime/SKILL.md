@@ -34,6 +34,7 @@ Endpoints:
 - `./cli/brs.js status` should show `stealth.enabled: true`, `stealth.fingerprint.generated: true`, and `platformPacing`.
 - Keep at least 70 ms between broker-driven browser requests. For unknown or sensitive platforms, serialize per target site and use seconds-to-minutes cooldowns.
 - Use `./cli/brs.js probe-session <platform>` to check persisted login/session state for `linkedin`, `reddit`, `facebook`, `instagram`, or `generic`; cookie values are omitted unless `--include-cookies` is passed.
+- For direct CDP legacy/debug tasks, do not use `context.pages()[0]`; create a dedicated page for the task, keep ownership explicit, and close/release it when finished.
 
 ## Quick Commands
 

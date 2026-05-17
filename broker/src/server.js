@@ -37,6 +37,19 @@ app.get('/status', async () => ({
   ...(await runtimeStatus()),
 }));
 
+app.get('/tab-audit', async () => ({
+  ok: true,
+  ...(await tabOwnershipAudit()),
+}));
+
+app.post('/tab-audit/reconcile', async (request, reply) => {
+  const audit = await tabOwnershipAudit();
+  if (!audit.ok) {
+    return reply.code(503).send({ ok: false, error: audit.error || 'TAB_AUDIT_FAILED', audit });
+  }
+  for (const tab of audit.trackedMissingTabs || []) store.closeTab(tab.id);
+  return { ok: true, closedMissingTrackedTabs: (audit.trackedMissingTabs || []).map((tab) => tab.id), audit };
+});
 
 app.get('/artifacts', async (request) => ({
   artifacts: store.listArtifacts({
@@ -615,7 +628,84 @@ async function runtimeStatus() {
     stealth: stealthStatus(runtimeConfig?.config, tlsGateway),
     tlsGateway,
     runtimeConfig: runtimeConfig?.config || null,
+    tabOwnership: await tabOwnershipAudit(),
     leases: store.listLeases({ activeOnly: true }).map((lease) => ({ ...lease, tabs: store.listTabs(lease.id) })),
+  };
+}
+
+
+async function tabOwnershipAudit() {
+  const openTrackedTabs = store.listTabs().filter((tab) => tab.status !== 'closed');
+  const trackedById = new Map(openTrackedTabs.map((tab) => [Number(tab.id), tab]));
+  const activeLeasesById = new Map(store.listLeases({ activeOnly: true }).map((lease) => [lease.id, lease]));
+
+  const base = {
+    ok: true,
+    extensionConnected: extension.connected,
+    actualTabs: [],
+    trackedOpenTabs: openTrackedTabs,
+    untrackedTabs: [],
+    trackedMissingTabs: [],
+    groupMismatches: [],
+    summary: {
+      actualTabs: 0,
+      trackedOpenTabs: openTrackedTabs.length,
+      untrackedTabs: 0,
+      trackedMissingTabs: 0,
+      groupMismatches: 0,
+    },
+  };
+
+  if (!extension.connected) {
+    return { ...base, ok: false, error: 'EXTENSION_NOT_CONNECTED' };
+  }
+
+  let actualTabs = [];
+  try {
+    const result = await extension.call('tabs.list', {}, { timeoutMs: 5000, connectTimeoutMs: 1000 });
+    actualTabs = Array.isArray(result?.tabs) ? result.tabs : [];
+  } catch (error) {
+    app.log.warn({ error, errorMessage: error?.message }, 'tab ownership audit failed');
+    return { ...base, ok: false, error: error?.message || String(error) };
+  }
+
+  const actualById = new Map(actualTabs.map((tab) => [Number(tab.id), tab]));
+  const untrackedTabs = actualTabs.filter((tab) => !trackedById.has(Number(tab.id))).map(classifyActualTab);
+  const trackedMissingTabs = openTrackedTabs.filter((tab) => !actualById.has(Number(tab.id)));
+  const groupMismatches = [];
+
+  for (const trackedTab of openTrackedTabs) {
+    const actualTab = actualById.get(Number(trackedTab.id));
+    if (!actualTab) continue;
+    const lease = activeLeasesById.get(trackedTab.leaseId);
+    if (lease?.chromeGroupId != null && actualTab.groupId != null && Number(actualTab.groupId) !== Number(lease.chromeGroupId)) {
+      groupMismatches.push({ tab: actualTab, tracked: trackedTab, lease });
+    }
+  }
+
+  return {
+    ...base,
+    actualTabs,
+    untrackedTabs,
+    trackedMissingTabs,
+    groupMismatches,
+    summary: {
+      actualTabs: actualTabs.length,
+      trackedOpenTabs: openTrackedTabs.length,
+      untrackedTabs: untrackedTabs.length,
+      trackedMissingTabs: trackedMissingTabs.length,
+      groupMismatches: groupMismatches.length,
+    },
+  };
+}
+
+function classifyActualTab(tab) {
+  const url = String(tab.url || '');
+  const systemLike = url === '' || url === 'about:blank' || url.startsWith('chrome://') || url.startsWith('devtools://') || url.startsWith('chrome-extension://');
+  return {
+    ...tab,
+    owner: systemLike ? 'browser/system' : 'untracked-direct-cdp-or-human',
+    severity: systemLike ? 'info' : 'warning',
   };
 }
 

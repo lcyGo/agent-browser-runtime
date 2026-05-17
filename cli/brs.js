@@ -7,6 +7,8 @@ const [cmd, ...args] = process.argv.slice(2);
 async function main() {
   if (!cmd || ['-h', '--help', 'help'].includes(cmd)) return help();
   if (cmd === 'status') return print(await api('GET', '/status'));
+  if (cmd === 'tab-audit' || cmd === 'tabs-audit' || cmd === 'audit-tabs') return print(await api('GET', '/tab-audit'));
+  if (cmd === 'tab-reconcile' || cmd === 'reconcile-tabs') return print(await api('POST', '/tab-audit/reconcile', {}));
   if (cmd === 'health') return print(await api('GET', '/health'));
   if (cmd === 'leases') return print(await api('GET', '/leases'));
   if (cmd === 'jobs') return print(await api('GET', `/jobs${queryString(parseOptions(args))}`));
@@ -168,7 +170,7 @@ function coerce(value) {
 
 function print(obj) { console.log(JSON.stringify(obj, null, 2)); }
 function help() {
-  console.log(`Agent Browser Runtime CLI\n\nUsage:\n  brs status\n  brs health\n  brs leases\n  brs jobs [--status success]\n  brs job <jobId>\n  brs artifacts [--leaseId <leaseId>] [--kind screenshot]\n  brs artifact <artifactId>\n  brs artifact-download <artifactId> <outputPath>\n  brs artifact-delete <artifactId>\n  brs cleanup-artifacts [--olderThanDays 7] [--dryRun false]\n  brs acquire --agentId demo-agent --taskId smoke --domain example.com\n  brs open <leaseId> <url>\n  brs fetch <url> [--agent demo-agent] [--task smoke] [--screenshot] [--full-page] [--keep-open] [--humanize enhanced]\n  brs probe-session <platform> [--url <url>] [--include-cookies] [--include-storage-state] [--cooldown false] [--screenshot] [--save-html] [--keep-open] [--humanize off]\n  brs extract <extractor.extract.js> <url> [--agent demo-agent] [--task smoke] [--screenshot] [--save-html] [--humanize enhanced] [--params '{"limit":3}'] [--max-attempts 2]\n  brs release <leaseId> [--keep-tabs]\n\nEnv:\n  BRS_BROKER_URL=${DEFAULT_BROKER}`);
+  console.log(`Agent Browser Runtime CLI\n\nUsage:\n  brs status\n  brs health\n  brs tab-audit\n  brs tab-reconcile\n  brs leases\n  brs jobs [--status success]\n  brs job <jobId>\n  brs artifacts [--leaseId <leaseId>] [--kind screenshot]\n  brs artifact <artifactId>\n  brs artifact-download <artifactId> <outputPath>\n  brs artifact-delete <artifactId>\n  brs cleanup-artifacts [--olderThanDays 7] [--dryRun false]\n  brs acquire --agentId demo-agent --taskId smoke --domain example.com\n  brs open <leaseId> <url>\n  brs fetch <url> [--agent demo-agent] [--task smoke] [--screenshot] [--full-page] [--keep-open] [--humanize enhanced]\n  brs probe-session <platform> [--url <url>] [--include-cookies] [--include-storage-state] [--cooldown false] [--screenshot] [--save-html] [--keep-open] [--humanize off]\n  brs extract <extractor.extract.js> <url> [--agent demo-agent] [--task smoke] [--screenshot] [--save-html] [--humanize enhanced] [--params '{"limit":3}'] [--max-attempts 2]\n  brs release <leaseId> [--keep-tabs]\n\nEnv:\n  BRS_BROKER_URL=${DEFAULT_BROKER}`);
 }
 
 main().catch((error) => {

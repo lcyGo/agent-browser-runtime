@@ -35,6 +35,7 @@ Endpoints:
 - For unknown or sensitive platforms, serialize per target site and use seconds-to-minutes cooldowns.
 - Use noVNC for login, Captcha, MFA, sliders, and account-safety checks.
 - Keep `.env`, `data/`, `artifacts/`, and `runtime/profile/` local and uncommitted.
+- For direct CDP legacy/debug tasks, do not use `context.pages()[0]`; create a dedicated page for the task, keep ownership explicit, and close/release it when finished.
 
 ## Commands
 
