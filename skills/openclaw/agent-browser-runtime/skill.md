@@ -61,8 +61,8 @@ This rule applies to every target site, not only LinkedIn.
 
 ## Browser Consistency
 
-The runtime exposes a default-on anti-bot/risk-control compatibility layer: `BRS_RUNTIME_PRESET=chrome124-macos`, seed-based fingerprint profile, optional mounted fingerprint-chromium binary, UA/UA-CH headers, main-world stealth evasions, locale/timezone CDP overrides, startup-level TLS gateway proxy, and humanized pacing through `BRS_*` env vars.
+The runtime defaults to `trusted-real-browser`: persistent profile, noVNC, tab groups, artifacts, UI primitives, pacing, and no page-level UA/header/WebGL/canvas/audio spoofing or startup-level timezone/AutomationControlled overrides. `BRS_STEALTH_MODE=legacy-js` is an explicit compatibility experiment; `BRS_STEALTH_MODE=patched-browser` is for a mounted browser binary that owns identity changes at the browser/backend layer.
 
-`./cli/brs.js status` should show `extensionConnected: true`, `stealth.tlsGateway.active: true`, and `tlsGateway.health.ok: true`.
+`./cli/brs.js status` should show `extensionConnected: true`, `stealth.mode: trusted-real-browser`, `stealth.enabled: false`, and `platformPacing.enabled: true`.
 
-Use `BRS_STEALTH_ENABLED=0` for debugging. Use `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only for an intentional clean browser profile.
+Use `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only for an intentional clean browser profile.

@@ -47,7 +47,7 @@ Run:
 ./cli/brs.js extract example.extract.js https://example.com --agent deploy-check --task extractor-smoke --screenshot --save-html
 ```
 
-`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing.enabled: true`.
+`status` should report `extensionConnected: true`, `stealth.mode: trusted-real-browser`, `stealth.enabled: false`, and `platformPacing.enabled: true`.
 
 ## Operating Rules
 
@@ -59,9 +59,10 @@ Run:
 
 ## Browser Consistency Controls
 
-Agent Browser Runtime intentionally exposes its anti-bot/risk-control browser consistency layer:
+Agent Browser Runtime intentionally exposes browser identity controls:
 
 - `BRS_RUNTIME_PRESET`
+- `BRS_STEALTH_MODE`
 - `BRS_GENERATE_FINGERPRINT_ENABLED`
 - `BRS_FINGERPRINT_CHROMIUM_HOST_PATH`
 - `BRS_FINGERPRINT_HEADERS_ENABLED`
@@ -73,7 +74,7 @@ Agent Browser Runtime intentionally exposes its anti-bot/risk-control browser co
 - `BRS_TLS_GATEWAY_BASE_URL`
 - `BOT_HUMANIZE_LEVEL`
 
-Set `BRS_STEALTH_ENABLED=0` for debugging a site compatibility issue. Set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only when an intentional clean browser profile is required.
+Default mode is `trusted-real-browser`. Set `BRS_STEALTH_MODE=legacy-js` only for an explicit compatibility experiment, and set `BRS_STEALTH_MODE=patched-browser` when a mounted browser binary owns identity changes. Set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only when an intentional clean browser profile is required.
 
 ## Repair Loop
 

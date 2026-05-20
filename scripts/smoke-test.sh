@@ -125,20 +125,24 @@ with open(sys.argv[1]) as f:
     status = json.load(f)
 if status.get('extensionConnected') is not True:
     raise SystemExit(f"extension not connected: {status}")
-if status.get('stealth', {}).get('enabled') is not True:
-    raise SystemExit(f"stealth policy not enabled: {status.get('stealth')}")
-if status.get('stealth', {}).get('fingerprint', {}).get('generated') is not True:
-    raise SystemExit(f"generated fingerprint missing: {status.get('stealth')}")
+stealth = status.get('stealth', {})
+if stealth.get('mode') != 'trusted-real-browser':
+    raise SystemExit(f"unexpected default stealth mode: {stealth}")
+if stealth.get('enabled') is not False:
+    raise SystemExit(f"legacy JS stealth should be disabled by default: {stealth}")
+if stealth.get('headersEnabled') or stealth.get('patchesEnabled'):
+    raise SystemExit(f"header/JS stealth should be opt-in: {stealth}")
+if stealth.get('timezone'):
+    raise SystemExit(f"timezone override should be inactive by default: {stealth}")
+fingerprint = stealth.get('fingerprint') or {}
+if fingerprint.get('appliedByExtension') or fingerprint.get('browserLevelIdentity'):
+    raise SystemExit(f"fingerprint identity should not be applied by default: {fingerprint}")
 if status.get('platformPacing', {}).get('enabled') is not True:
     raise SystemExit(f"platform pacing missing: {status.get('platformPacing')}")
 tls = status.get('tlsGateway') or {}
 stealth_tls = status.get('stealth', {}).get('tlsGateway') or {}
-if tls.get('enabled') is not True or tls.get('proxyConfigured') is not True:
-    raise SystemExit(f"TLS gateway not configured: {tls}")
-if tls.get('active') is not True or stealth_tls.get('active') is not True:
-    raise SystemExit(f"TLS gateway not active: tls={tls} stealth={stealth_tls}")
-if (tls.get('health') or {}).get('ok') is not True:
-    raise SystemExit(f"TLS gateway health missing: {tls}")
+if tls.get('enabled') is not False or tls.get('active') is not False or stealth_tls.get('active') is not False:
+    raise SystemExit(f"TLS gateway browser proxy should be opt-in by default: tls={tls} stealth={stealth_tls}")
 print('extensionConnected=true')
 print('humanize=', status.get('humanize'))
 print('stealth=', status.get('stealth'))

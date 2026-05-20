@@ -1,12 +1,13 @@
 globalThis.BRS_CONFIG = globalThis.BRS_CONFIG || {
   brokerWs: 'ws://broker:17890/extension',
   stealth: {
-    enabled: true,
+    mode: 'trusted-real-browser',
+    enabled: false,
     profile: 'standard',
-    headersEnabled: true,
-    patchesEnabled: true,
-    canvasNoise: true,
-    audioNoise: true,
+    headersEnabled: false,
+    patchesEnabled: false,
+    canvasNoise: false,
+    audioNoise: false,
     acceptLanguage: 'en-US,en;q=0.9',
     languages: ['en-US', 'en'],
     locale: 'en-US',

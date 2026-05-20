@@ -16,6 +16,40 @@ is_enabled() {
   esac
 }
 
+normalize_stealth_mode() {
+  local raw="${1:-}"
+  raw="$(printf '%s' "${raw}" | tr '[:upper:]' '[:lower:]')"
+  if [ -z "${raw}" ]; then
+    if is_enabled "${BRS_STEALTH_ENABLED:-0}"; then
+      printf '%s' "legacy-js"
+    else
+      printf '%s' "trusted-real-browser"
+    fi
+    return
+  fi
+
+  case "${raw}" in
+    0|false|disabled|disable|off)
+      printf '%s' "off"
+      ;;
+    trusted|real|real-browser|trusted-real-browser)
+      printf '%s' "trusted-real-browser"
+      ;;
+    legacy|js|legacy-js)
+      printf '%s' "legacy-js"
+      ;;
+    patched|patched-browser|kernel|kernel-patched)
+      printf '%s' "patched-browser"
+      ;;
+    *)
+      printf '%s' "${raw}"
+      ;;
+  esac
+}
+
+EFFECTIVE_STEALTH_MODE="$(normalize_stealth_mode "${BRS_STEALTH_MODE:-}")"
+export BRS_EFFECTIVE_STEALTH_MODE="${EFFECTIVE_STEALTH_MODE}"
+
 CURRENT_RUNTIME_SIGNATURE="${BOT_RUNTIME_SIGNATURE:-}"
 if [ -n "${CURRENT_RUNTIME_SIGNATURE}" ]; then
   PREVIOUS_RUNTIME_SIGNATURE=""
@@ -47,7 +81,7 @@ rm -f "${USER_DATA_DIR}"/SingletonLock \
 
 CHROME_PROXY_ARGS=()
 EFFECTIVE_PROXY_SERVER="${BROWSER_PROXY_SERVER:-}"
-if [ -z "${EFFECTIVE_PROXY_SERVER}" ] && is_enabled "${BRS_TLS_GATEWAY_ENABLED:-1}" && [ -n "${BRS_TLS_GATEWAY_PROXY_SERVER:-}" ]; then
+if [ -z "${EFFECTIVE_PROXY_SERVER}" ] && is_enabled "${BRS_TLS_GATEWAY_ENABLED:-0}" && [ -n "${BRS_TLS_GATEWAY_PROXY_SERVER:-}" ]; then
   EFFECTIVE_PROXY_SERVER="${BRS_TLS_GATEWAY_PROXY_SERVER}"
   echo "Using TLS gateway proxy: ${BRS_TLS_GATEWAY_PROXY_SERVER}"
 elif [ -n "${EFFECTIVE_PROXY_SERVER}" ]; then
@@ -83,7 +117,7 @@ else
   export BRS_FINGERPRINT_CHROMIUM_ACTIVE="0"
   export BRS_FINGERPRINT_CHROMIUM_BINARY=""
 fi
-export BRS_RUNTIME_CONFIG_GENERATOR_VERSION="v3-chrome124-macos-preset"
+export BRS_RUNTIME_CONFIG_GENERATOR_VERSION="v5-trusted-real-browser-native-startup"
 
 DETECTED_CHROME_FULL_VERSION=""
 DETECTED_CHROME_MAJOR=""
@@ -113,6 +147,7 @@ import os
 
 exact = {
     "BOT_RUNTIME_SIGNATURE",
+    "BRS_EFFECTIVE_STEALTH_MODE",
     "BROWSER_PROXY_BYPASS_LIST",
     "BROWSER_PROXY_SERVER",
     "BROWSER_RUNTIME_BROKER_WS",
@@ -218,6 +253,30 @@ def languages_from_accept_language(value):
         if part.split(";")[0].strip()
     ]
 
+def normalize_stealth_mode():
+    raw = env("BRS_STEALTH_MODE", "").strip().lower()
+    if not raw:
+        return env("BRS_EFFECTIVE_STEALTH_MODE", "trusted-real-browser")
+    aliases = {
+        "0": "off",
+        "false": "off",
+        "disabled": "off",
+        "disable": "off",
+        "off": "off",
+        "trusted": "trusted-real-browser",
+        "real": "trusted-real-browser",
+        "real-browser": "trusted-real-browser",
+        "trusted-real-browser": "trusted-real-browser",
+        "legacy": "legacy-js",
+        "js": "legacy-js",
+        "legacy-js": "legacy-js",
+        "patched": "patched-browser",
+        "patched-browser": "patched-browser",
+        "kernel": "patched-browser",
+        "kernel-patched": "patched-browser",
+    }
+    return aliases.get(raw, raw)
+
 def chrome_version(rng, major):
     stable_builds = {
         122: [6261, 6262],
@@ -290,7 +349,7 @@ def platform_profile(platform_key, rng):
     return profiles.get(platform_key, profiles["windows"])
 
 def build_fingerprint():
-    enabled = flag("BRS_GENERATE_FINGERPRINT_ENABLED", True)
+    enabled = flag("BRS_GENERATE_FINGERPRINT_ENABLED", legacy_js_stealth or browser_level_identity)
     seed, raw_seed = seed_int()
     rng = random.Random(seed)
     platform_key = env("BRS_FINGERPRINT_PLATFORM", env("FINGERPRINT_PLATFORM", "windows")).lower()
@@ -376,17 +435,26 @@ def build_fingerprint():
         "headers": generated_headers,
     }
 
+stealth_mode = normalize_stealth_mode()
+legacy_js_stealth = stealth_mode == "legacy-js"
+browser_level_identity = stealth_mode == "patched-browser"
+
 fingerprint = build_fingerprint()
 accept_language = env("BRS_ACCEPT_LANGUAGE", fingerprint["acceptLanguage"])
 derived_languages = languages_from_accept_language(accept_language)
 explicit_headers = json_object("BRS_EXTRA_HTTP_HEADERS_JSON")
-generated_headers = fingerprint["headers"] if fingerprint["enabled"] else {}
-extra_headers = merge_headers(generated_headers, explicit_headers)
+generated_headers = fingerprint["headers"] if legacy_js_stealth and fingerprint["enabled"] else {}
+extra_headers = merge_headers(generated_headers, explicit_headers) if legacy_js_stealth else {}
 tls_proxy_server = env("BRS_TLS_GATEWAY_PROXY_SERVER", "")
-tls_enabled = flag("BRS_TLS_GATEWAY_ENABLED", True)
+tls_enabled = flag("BRS_TLS_GATEWAY_ENABLED", False)
 browser_proxy_server = env("BROWSER_PROXY_SERVER", "")
 explicit_user_agent = env("BRS_USER_AGENT", "")
 explicit_platform = env("BRS_PLATFORM", "")
+active_timezone = env("BRS_STEALTH_TIMEZONE", env("BROWSER_TIMEZONE", "")) if (legacy_js_stealth or browser_level_identity) else ""
+headers_enabled = legacy_js_stealth and flag("BRS_FINGERPRINT_HEADERS_ENABLED", True)
+patches_enabled = legacy_js_stealth and flag("BRS_FINGERPRINT_PATCHES_ENABLED", True)
+canvas_noise = legacy_js_stealth and flag("BRS_CANVAS_NOISE_ENABLED", True)
+audio_noise = legacy_js_stealth and flag("BRS_AUDIO_NOISE_ENABLED", True)
 config = {
     "brokerWs": env("BROWSER_RUNTIME_BROKER_WS", "ws://broker:17890/extension"),
     "browserRuntime": {
@@ -402,6 +470,8 @@ config = {
     },
     "fingerprint": {
         "generated": fingerprint["enabled"],
+        "appliedByExtension": legacy_js_stealth,
+        "browserLevelIdentity": browser_level_identity,
         "seed": fingerprint["seed"],
         "platformKey": fingerprint["platformKey"],
         "chromeMajor": fingerprint["chromeMajor"],
@@ -410,25 +480,26 @@ config = {
         "headerKeys": sorted(extra_headers.keys()),
     },
     "stealth": {
-        "enabled": flag("BRS_STEALTH_ENABLED", True),
+        "mode": stealth_mode,
+        "enabled": legacy_js_stealth,
         "profile": env("BRS_STEALTH_PROFILE", "standard"),
-        "excludedHosts": csv_list("BRS_STEALTH_EXCLUDED_HOSTS", ["accounts.google.com"]),
-        "headersEnabled": flag("BRS_FINGERPRINT_HEADERS_ENABLED", True),
-        "patchesEnabled": flag("BRS_FINGERPRINT_PATCHES_ENABLED", True),
-        "canvasNoise": flag("BRS_CANVAS_NOISE_ENABLED", True),
-        "audioNoise": flag("BRS_AUDIO_NOISE_ENABLED", True),
+        "excludedHosts": csv_list("BRS_STEALTH_EXCLUDED_HOSTS", ["accounts.google.com", "linkedin.com", "www.linkedin.com", "jd.com", "www.jd.com", "github.com", "www.github.com"]),
+        "headersEnabled": headers_enabled,
+        "patchesEnabled": patches_enabled,
+        "canvasNoise": canvas_noise,
+        "audioNoise": audio_noise,
         "acceptLanguage": accept_language,
         "languages": json_list("BRS_LANGUAGES_JSON", fingerprint["languages"] or derived_languages or ["en-US", "en"]),
         "locale": env("BRS_LOCALE", "en-US"),
-        "timezone": env("BRS_STEALTH_TIMEZONE", env("BROWSER_TIMEZONE", "UTC")),
-        "platform": explicit_platform or (fingerprint["navigatorPlatform"] if fingerprint["enabled"] else ""),
-        "userAgent": explicit_user_agent or (fingerprint["userAgent"] if fingerprint["enabled"] else ""),
-        "userAgentMetadata": fingerprint["userAgentMetadata"] if fingerprint["enabled"] and not explicit_user_agent else None,
-        "webglVendor": env("BRS_WEBGL_VENDOR", fingerprint["webglVendor"] if fingerprint["enabled"] else ""),
-        "webglRenderer": env("BRS_WEBGL_RENDERER", fingerprint["webglRenderer"] if fingerprint["enabled"] else ""),
-        "hardwareConcurrency": fingerprint["hardwareConcurrency"] if fingerprint["enabled"] else None,
-        "deviceMemory": fingerprint["deviceMemory"] if fingerprint["enabled"] else None,
-        "maxTouchPoints": fingerprint["maxTouchPoints"] if fingerprint["enabled"] else None,
+        "timezone": active_timezone,
+        "platform": (explicit_platform or (fingerprint["navigatorPlatform"] if fingerprint["enabled"] else "")) if legacy_js_stealth else "",
+        "userAgent": (explicit_user_agent or (fingerprint["userAgent"] if fingerprint["enabled"] else "")) if legacy_js_stealth else "",
+        "userAgentMetadata": fingerprint["userAgentMetadata"] if legacy_js_stealth and fingerprint["enabled"] and not explicit_user_agent else None,
+        "webglVendor": env("BRS_WEBGL_VENDOR", fingerprint["webglVendor"] if fingerprint["enabled"] else "") if legacy_js_stealth else "",
+        "webglRenderer": env("BRS_WEBGL_RENDERER", fingerprint["webglRenderer"] if fingerprint["enabled"] else "") if legacy_js_stealth else "",
+        "hardwareConcurrency": fingerprint["hardwareConcurrency"] if legacy_js_stealth and fingerprint["enabled"] else None,
+        "deviceMemory": fingerprint["deviceMemory"] if legacy_js_stealth and fingerprint["enabled"] else None,
+        "maxTouchPoints": fingerprint["maxTouchPoints"] if legacy_js_stealth and fingerprint["enabled"] else None,
         "extraHeaders": extra_headers,
         "tlsGateway": {
             "enabled": tls_enabled,
@@ -442,14 +513,20 @@ PY
   EXTENSION_ARGS+=("--disable-extensions-except=${GENERATED_EXTENSION_DIR}" "--load-extension=${GENERATED_EXTENSION_DIR}")
 fi
 
+BROWSER_IDENTITY_ARGS=()
+if [ "${EFFECTIVE_STEALTH_MODE}" = "legacy-js" ]; then
+  BROWSER_IDENTITY_ARGS+=("--disable-blink-features=AutomationControlled")
+fi
+if { [ "${EFFECTIVE_STEALTH_MODE}" = "legacy-js" ] || [ "${EFFECTIVE_STEALTH_MODE}" = "patched-browser" ]; } && [ -n "${BROWSER_TIMEZONE:-}" ]; then
+  BROWSER_IDENTITY_ARGS+=("--timezone=${BROWSER_TIMEZONE}")
+fi
+
 COMMON_ARGS=(
   --no-first-run
   --no-sandbox
   --disable-default-apps
   --disable-sync
   --no-default-browser-check
-  --disable-blink-features=AutomationControlled
-  --timezone="${BROWSER_TIMEZONE:-UTC}"
   --user-data-dir="${USER_DATA_DIR}"
   --remote-debugging-port="${CDP_PORT:-9222}"
   --remote-debugging-address=0.0.0.0
@@ -461,6 +538,7 @@ if [ -n "${FINGERPRINT_BIN}" ]; then
   echo "Using fingerprint-chromium binary: ${FINGERPRINT_BIN} (seed=${FINGERPRINT_SEED:-1000})"
   exec "${FINGERPRINT_BIN}" \
     "${COMMON_ARGS[@]}" \
+    "${BROWSER_IDENTITY_ARGS[@]}" \
     --fingerprint="${FINGERPRINT_SEED:-1000}" \
     --fingerprint-platform="${FINGERPRINT_PLATFORM:-windows}" \
     "${EXTENSION_ARGS[@]}" \
@@ -470,6 +548,7 @@ else
   echo "Using system Chromium (no fingerprint-chromium binary mounted)"
   exec chromium \
     "${COMMON_ARGS[@]}" \
+    "${BROWSER_IDENTITY_ARGS[@]}" \
     --disable-gpu \
     "${EXTENSION_ARGS[@]}" \
     "${CHROME_PROXY_ARGS[@]}" \

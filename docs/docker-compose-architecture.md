@@ -27,7 +27,7 @@ Responsibilities:
 - source of truth for leases/tabs/artifacts in SQLite
 - JSON-RPC request/response channel to the companion extension
 - one-shot jobs: `fetch-page`, `extract`, `sessions/probe`
-- runtime status: sanitized extension-loaded fingerprint config, platform pacing policy, and optional TLS gateway health/stats
+- runtime status: sanitized extension-loaded identity config, platform pacing policy, and optional TLS gateway health/stats
 - artifact writing under `artifacts/YYYY-MM-DD/<leaseId>/`
 
 ### tls-gateway
@@ -47,8 +47,8 @@ Responsibilities:
 - loads `extension/` at browser launch
 - can mount `fingerprint-chromium` through `docker-compose.fingerprint.yml`; when present, launch uses the mounted binary with `--fingerprint`
 - generates `runtime-config.js` from `BRS_*` env vars for the companion extension
-- generates a coherent seed-based fingerprint profile unless `BRS_GENERATE_FINGERPRINT_ENABLED=0`
-- applies the startup-level proxy/TLS gateway when `BRS_TLS_GATEWAY_PROXY_SERVER` is set and disables QUIC for that proxied path
+- defaults to `trusted-real-browser`, with legacy JS/CDP identity overrides disabled
+- applies the startup-level proxy/TLS gateway when `BRS_TLS_GATEWAY_ENABLED=1` and `BRS_TLS_GATEWAY_PROXY_SERVER` are set, then disables QUIC for that proxied path
 - exposes an internal CDP proxy for diagnostics; the MVP control path uses the extension debugger API for page ops
 
 ### companion extension
@@ -57,7 +57,7 @@ Responsibilities:
 
 - create tabs and real Chrome Tab Groups
 - attach `chrome.debugger` to background tabs
-- apply default browser consistency policy: generated fingerprint headers, UA metadata, locale/timezone overrides, and main-world browser-surface patches
+- apply legacy JS/CDP browser consistency policy only when `BRS_STEALTH_MODE=legacy-js`
 - probe platform session state through CDP cookies, optional storage-state export, and lightweight page login/challenge signals
 - capture HTML and screenshots
 - close/release tabs when broker requests

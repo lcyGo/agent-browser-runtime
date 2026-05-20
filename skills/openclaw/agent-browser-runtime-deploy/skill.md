@@ -49,9 +49,9 @@ Expected endpoints:
 ./cli/brs.js extract example.extract.js https://example.com --agent deploy-check --task extractor-smoke --screenshot --save-html
 ```
 
-`status` should report `extensionConnected: true`, `stealth.enabled: true`, `stealth.fingerprint.generated: true`, `stealth.tlsGateway.active: true`, `tlsGateway.health.ok: true`, and `platformPacing.enabled: true`.
+`status` should report `extensionConnected: true`, `stealth.mode: trusted-real-browser`, `stealth.enabled: false`, and `platformPacing.enabled: true`.
 
-The default browser identity preset is `BRS_RUNTIME_PRESET=chrome124-macos`; it applies across regular browser work unless overridden.
+The default browser identity preset is `BRS_RUNTIME_PRESET=trusted-real-browser`; legacy JS/CDP stealth is opt-in with `BRS_STEALTH_MODE=legacy-js`, and browser-binary identity work uses `BRS_STEALTH_MODE=patched-browser`.
 
 ## Repair Loop
 

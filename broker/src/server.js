@@ -783,21 +783,25 @@ function stealthStatus(runtimeConfig = null, tlsGateway = null) {
   const extraHeaders = parseJsonObject(process.env.BRS_EXTRA_HTTP_HEADERS_JSON);
   const runtimeStealth = runtimeConfig?.stealth || {};
   const fingerprint = runtimeConfig?.fingerprint || null;
+  const runtimeValue = (key, fallback) => Object.hasOwn(runtimeStealth, key) ? runtimeStealth[key] : fallback;
+  const stealthMode = runtimeStealth.mode || String(process.env.BRS_STEALTH_MODE || (readEnvFlag('BRS_STEALTH_ENABLED', false) ? 'legacy-js' : 'trusted-real-browser'));
+  const stealthEnabled = runtimeStealth.enabled ?? (stealthMode === 'legacy-js');
   return {
-    enabled: runtimeStealth.enabled ?? readEnvFlag('BRS_STEALTH_ENABLED', true),
+    mode: stealthMode,
+    enabled: stealthEnabled,
     profile: runtimeStealth.profile || String(process.env.BRS_STEALTH_PROFILE || 'standard'),
-    headersEnabled: runtimeStealth.headersEnabled ?? readEnvFlag('BRS_FINGERPRINT_HEADERS_ENABLED', true),
-    patchesEnabled: runtimeStealth.patchesEnabled ?? readEnvFlag('BRS_FINGERPRINT_PATCHES_ENABLED', true),
-    canvasNoise: runtimeStealth.canvasNoise ?? readEnvFlag('BRS_CANVAS_NOISE_ENABLED', true),
-    audioNoise: runtimeStealth.audioNoise ?? readEnvFlag('BRS_AUDIO_NOISE_ENABLED', true),
-    acceptLanguage: runtimeStealth.acceptLanguage || String(process.env.BRS_ACCEPT_LANGUAGE || 'en-US,en;q=0.9'),
-    locale: runtimeStealth.locale || String(process.env.BRS_LOCALE || 'en-US'),
-    timezone: runtimeStealth.timezone || String(process.env.BRS_STEALTH_TIMEZONE || process.env.BROWSER_TIMEZONE || 'UTC'),
-    platform: runtimeStealth.platform || String(process.env.BRS_PLATFORM || ''),
+    headersEnabled: runtimeStealth.headersEnabled ?? (stealthEnabled && readEnvFlag('BRS_FINGERPRINT_HEADERS_ENABLED', true)),
+    patchesEnabled: runtimeStealth.patchesEnabled ?? (stealthEnabled && readEnvFlag('BRS_FINGERPRINT_PATCHES_ENABLED', true)),
+    canvasNoise: runtimeStealth.canvasNoise ?? (stealthEnabled && readEnvFlag('BRS_CANVAS_NOISE_ENABLED', true)),
+    audioNoise: runtimeStealth.audioNoise ?? (stealthEnabled && readEnvFlag('BRS_AUDIO_NOISE_ENABLED', true)),
+    acceptLanguage: runtimeValue('acceptLanguage', String(process.env.BRS_ACCEPT_LANGUAGE || 'en-US,en;q=0.9')),
+    locale: runtimeValue('locale', String(process.env.BRS_LOCALE || 'en-US')),
+    timezone: runtimeValue('timezone', String(process.env.BRS_STEALTH_TIMEZONE || process.env.BROWSER_TIMEZONE || 'UTC')),
+    platform: runtimeValue('platform', String(process.env.BRS_PLATFORM || '')),
     userAgent: runtimeStealth.userAgent ? 'configured' : (process.env.BRS_USER_AGENT ? 'configured' : 'default'),
     webgl: {
-      vendor: runtimeStealth.webglVendor || String(process.env.BRS_WEBGL_VENDOR || ''),
-      renderer: runtimeStealth.webglRenderer || String(process.env.BRS_WEBGL_RENDERER || ''),
+      vendor: runtimeValue('webglVendor', String(process.env.BRS_WEBGL_VENDOR || '')),
+      renderer: runtimeValue('webglRenderer', String(process.env.BRS_WEBGL_RENDERER || '')),
     },
     hardware: {
       hardwareConcurrency: runtimeStealth.hardwareConcurrency ?? null,
@@ -807,9 +811,9 @@ function stealthStatus(runtimeConfig = null, tlsGateway = null) {
     fingerprint,
     extraHeaderKeys: runtimeStealth.extraHeaderKeys || Object.keys(extraHeaders),
     tlsGateway: {
-      enabled: tlsGateway?.enabled ?? readEnvFlag('BRS_TLS_GATEWAY_ENABLED', true),
+      enabled: tlsGateway?.enabled ?? readEnvFlag('BRS_TLS_GATEWAY_ENABLED', false),
       configured: Boolean(tlsProxyServer),
-      active: tlsGateway?.active ?? Boolean(readEnvFlag('BRS_TLS_GATEWAY_ENABLED', true) && tlsProxyServer && !browserProxyServer),
+      active: tlsGateway?.active ?? Boolean(readEnvFlag('BRS_TLS_GATEWAY_ENABLED', false) && tlsProxyServer && !browserProxyServer),
       healthOk: tlsGateway?.health?.ok ?? null,
     },
   };
@@ -859,7 +863,7 @@ function platformCooldownSeconds(platform) {
 }
 
 async function tlsGatewayStatus() {
-  const enabled = readEnvFlag('BRS_TLS_GATEWAY_ENABLED', true);
+  const enabled = readEnvFlag('BRS_TLS_GATEWAY_ENABLED', false);
   const proxyServer = String(process.env.BRS_TLS_GATEWAY_PROXY_SERVER || '').trim();
   const browserProxyServer = String(process.env.BROWSER_PROXY_SERVER || '').trim();
   const baseUrl = String(process.env.BRS_TLS_GATEWAY_BASE_URL || process.env.TLS_GATEWAY_BASE_URL || '').trim();

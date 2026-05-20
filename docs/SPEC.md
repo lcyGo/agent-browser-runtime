@@ -56,27 +56,26 @@ Host bindings are loopback-only:
 - Load companion extension from `./extension`.
 - Generate `runtime-config.js` from `BRS_*` env vars before Chrome starts.
 
-## Browser consistency policy
+## Browser identity policy
 
-The runtime has a default-on browser consistency layer. It is intended to make real-browser agent sessions internally coherent across launch args, HTTP headers, JS-visible browser surfaces, and pacing. It does not guarantee platform acceptance and does not replace manual handoff for login, Captcha, sliders, or account-safety checks.
+The runtime defaults to `trusted-real-browser`: real browser surfaces, persistent profile, noVNC handoff, visible tab groups, pacing, and artifacts, without extension-level UA/header/WebGL/canvas/audio spoofing or startup-level timezone/AutomationControlled overrides. This baseline is intended for high-trust login, checkout, account-safety, and other sensitive flows where page-level spoofing can create cross-layer inconsistencies.
 
 Default capabilities:
 
-- `BRS_GENERATE_FINGERPRINT_ENABLED=1`: derive a coherent browser identity from `BRS_FINGERPRINT_SEED` or `FINGERPRINT_SEED`.
-- `BRS_RUNTIME_PRESET=chrome124-macos`: default browser identity preset aligns TLS gateway, UA/UA-CH, navigator platform, timezone, and WebGL around a Chrome 124 macOS profile unless explicitly overridden. It is a browser identity preset, not a target-site label.
+- `BRS_STEALTH_MODE=trusted-real-browser`: keep browser-visible identity native to the running browser and disable legacy JS/CDP stealth overrides.
+- `BRS_GENERATE_FINGERPRINT_ENABLED=0`: do not generate or apply extension-level UA/UA-CH/WebGL/hardware profiles by default.
+- `BRS_RUNTIME_PRESET=trusted-real-browser`: default identity preset for the real-browser baseline.
 - `docker-compose.fingerprint.yml`: optional overlay that mounts a host `fingerprint-chromium` directory at `/opt/fingerprint-chromium`; when `chrome-wrapper` or `chrome` is present, Chromium startup uses that binary with `--fingerprint` and reports it through `status.browserRuntime`.
-- Generated identity includes user agent, UA-CH metadata and headers, `Accept-Language`, navigator platform, WebGL vendor/renderer, hardware concurrency, device memory, and touch points.
-- Chromium major/full version is detected from the runtime binary by default. `BRS_CHROME_MAJOR` and `BRS_CHROME_FULL_VERSION` intentionally override the detected version when set.
-- `BRS_FINGERPRINT_HEADERS_ENABLED=1`: apply generated headers plus optional `BRS_EXTRA_HTTP_HEADERS_JSON` through CDP before first navigation.
-- `BRS_FINGERPRINT_PATCHES_ENABLED=1`: inject `stealth-content.js` in the main world at `document_start`; default evasions cover webdriver, languages, platform, vendor, plugins/mimeTypes, Chrome app/runtime stubs, media codecs, WebGL, canvas, and audio.
-- `BRS_STEALTH_EXCLUDED_HOSTS=accounts.google.com,linkedin.com,www.linkedin.com`: skip CDP header/UA overrides and content-script patches for high-trust login hosts where a spoofed browser identity is more likely to hurt than help.
-- `BRS_CANVAS_NOISE_ENABLED=1` / `BRS_AUDIO_NOISE_ENABLED=1`: patch common canvas/audio fingerprint surfaces.
-- `BRS_LOCALE`, `BRS_STEALTH_TIMEZONE`, `BRS_USER_AGENT`, `BRS_PLATFORM`, `BRS_WEBGL_VENDOR`, and `BRS_WEBGL_RENDERER`: optional explicit profile overrides.
+- `BRS_STEALTH_MODE=legacy-js`: opt into the previous extension-level compatibility layer. In this mode a generated identity can include user agent, UA-CH metadata and headers, `Accept-Language`, navigator platform, WebGL vendor/renderer, hardware concurrency, device memory, and touch points.
+- `BRS_FINGERPRINT_HEADERS_ENABLED=1` in `legacy-js`: apply generated headers plus optional `BRS_EXTRA_HTTP_HEADERS_JSON` through CDP before first navigation.
+- `BRS_FINGERPRINT_PATCHES_ENABLED=1` in `legacy-js`: inject `stealth-content.js` in the main world at `document_start`; evasions cover webdriver, languages, platform, vendor, plugins/mimeTypes, Chrome app/runtime stubs, media codecs, WebGL, canvas, and audio.
+- `BROWSER_TIMEZONE` / `BRS_STEALTH_TIMEZONE`: applied only in `legacy-js` or `patched-browser`; the trusted default leaves browser timezone behavior native.
+- `BRS_STEALTH_EXCLUDED_HOSTS=accounts.google.com,linkedin.com,www.linkedin.com,jd.com,www.jd.com,github.com,www.github.com`: skip legacy JS/CDP overrides for high-trust login hosts where a spoofed browser identity is more likely to hurt than help.
+- `BRS_TLS_GATEWAY_ENABLED=0`: TLS gateway is present as an optional service, but the browser proxy path is opt-in to avoid transport/browser mismatches. When enabled, `BRS_TLS_GATEWAY_PROXY_SERVER` routes Chromium through the gateway and disables QUIC on that proxied path.
 - `BOT_HUMANIZE_LEVEL` and per-job `--humanize`: task-level pacing, mousemove, scroll, and pauses.
 - `BRS_PLATFORM_COOLDOWN_ENABLED=1`: platform-level cooldown defaults cover common high-friction social surfaces (`reddit=45s`, `facebook=60s`, `linkedin=180s`, `instagram=240s`, manual challenge `300s`).
-- `BRS_TLS_GATEWAY_ENABLED=1`: TLS gateway capability is enabled by default. The compose stack includes `tls-gateway`, and `BRS_TLS_GATEWAY_PROXY_SERVER` defaults to `http://tls-gateway:8080`, so Chromium receives `--proxy-server` and `--disable-quic` before startup unless a caller overrides or disables it. Status reads gateway health/stats with `BRS_TLS_GATEWAY_BASE_URL`, `BRS_TLS_GATEWAY_HEALTH_URL`, or `BRS_TLS_GATEWAY_STATS_URL`.
 
-The default profile is `BRS_STEALTH_PROFILE=chrome124-macos`. Set `BRS_STEALTH_ENABLED=0` for debugging or site compatibility isolation.
+Set `BRS_STEALTH_MODE=patched-browser` when a mounted browser binary owns identity changes at the browser/backend layer. In that mode the companion extension still avoids JS/CDP stealth injection.
 
 Profile reset policy: `BOT_RUNTIME_SIGNATURE` changes no longer wipe the persisted browser profile by default. Set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` when you intentionally want a clean profile after changing low-level browser identity settings.
 
@@ -277,7 +276,8 @@ Expected:
 - broker healthy
 - extension connected
 - `status.humanize.level` is present
-- `status.stealth.enabled` is true by default
+- `status.stealth.mode` is `trusted-real-browser`
+- `status.stealth.enabled` is false by default
 - a real Chrome Tab Group appears in noVNC
 - HTML artifact exists
 - screenshot artifact exists

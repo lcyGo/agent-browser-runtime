@@ -55,32 +55,30 @@ Quick manual checks:
 ./cli/brs.js fetch https://example.com --agent demo-agent --task smoke --screenshot --humanize enhanced
 ```
 
-Expected outputs: broker status, TLS gateway health, HTML artifact, screenshot artifact, and a real Chrome Tab Group visible in noVNC.
+Expected outputs: broker status, HTML artifact, screenshot artifact, and a real Chrome Tab Group visible in noVNC. TLS gateway health is reported when the optional gateway browser proxy is enabled.
 
-`./cli/brs.js status` also reports `stealth.enabled`, fingerprint header/patch toggles, and whether the startup-level TLS gateway proxy is configured and active.
-The default runtime preset is `chrome124-macos`, which aligns the browser identity around a Chrome 124 macOS profile to match the bundled TLS gateway profile. This preset applies to regular browser work across sites unless an environment override changes it. When the fingerprint overlay is used, `status.browserRuntime.fingerprintChromium.active` reports whether the mounted binary was actually selected.
-It now also reports the loaded runtime fingerprint summary from the extension, including generated UA family, UA-CH header keys, platform, WebGL, and hardware-surface values.
+`./cli/brs.js status` also reports `stealth.mode`, whether legacy JS/CDP stealth overrides are active, and whether the startup-level TLS gateway proxy is configured and active.
+The default runtime preset is `trusted-real-browser`: the browser keeps its real UA, UA-CH, platform, WebGL, canvas, audio, timezone, WebDriver launch behavior, and TLS path unless you explicitly opt into a spoofing mode. When the fingerprint overlay is used, `status.browserRuntime.fingerprintChromium.active` reports whether the mounted binary was actually selected.
+It also reports the loaded runtime fingerprint summary from the extension when a fingerprint profile is generated.
 The `BRS_*` environment prefix is kept as the stable Browser Runtime Service config surface.
 
-## Anti-bot and browser-consistency stack
+## Browser identity modes
 
-The runtime has a default-on anti-bot/risk-control compatibility layer so browser automation looks internally coherent across launch args, request headers, JS-visible surfaces, pacing, and manual handoff.
+The default mode is `trusted-real-browser`. It favors high-trust site compatibility by avoiding page-level spoofing and keeping browser identity surfaces native to the running browser, without startup-level timezone or AutomationControlled overrides. This is the right baseline for login, checkout, account-safety, and other sensitive flows.
 
 - Real browser runtime instead of pure headless fetches.
 - Persistent Chrome profile for login-state reuse, cookies, localStorage, and extension state.
 - noVNC human handoff for login, Captcha, slider, MFA, and account-safety checkpoints.
 - Real Chrome Tab Groups so concurrent agents have visible, lease-scoped workspaces.
-- Seed-based fingerprint generation: user agent, UA-CH, Accept-Language, platform, WebGL, hardware concurrency, device memory, and touch points move together.
-- CDP header and emulation overrides before navigation: UA/UA-CH, locale, timezone, Accept-Language, and optional extra headers.
-- Main-world stealth patching at `document_start`: webdriver, languages, platform, vendor, plugins/mimeTypes, Chrome runtime stubs, permissions, media codecs, WebGL, canvas, and audio surfaces.
-- Canvas/audio noise controls and explicit WebGL/user-agent/platform overrides for compatibility testing.
 - Platform cooldowns plus per-job humanized warmup, mousemove, scroll, and pause primitives.
 - All-site browser interaction discipline: after the initial exact URL/probe entry point, agents must complete workflows through visible UI controls with keyboard input, cursor movement/clicking, scrolling, hover, and pauses instead of synthesized URL jumps, querystring shortcuts, DOM-click dispatch, or backend/API shortcuts.
 - Runtime UI action primitives exposed through `/tabs/:tabId/ui/*` and extractor `ui` helpers: `move`, `click`, `type`, `press`, `scroll`, and `waitFor`.
-- Startup-level proxy/TLS-gateway integration with QUIC disabled on the proxied path and health/stats surfacing in `status`.
-- High-trust login-host exclusions through `BRS_STEALTH_EXCLUDED_HOSTS`; `accounts.google.com` and LinkedIn are excluded by default because spoofing can harm account login flows.
+- Optional `legacy-js` mode: CDP header/UA/locale/timezone overrides plus main-world patches for webdriver, languages, platform, vendor, plugins/mimeTypes, Chrome runtime stubs, permissions, media codecs, WebGL, canvas, and audio surfaces.
+- Optional `patched-browser` mode: use a mounted browser binary such as fingerprint Chromium and let the browser backend own identity changes instead of extension injection.
+- Optional startup-level TLS gateway proxy with QUIC disabled on the proxied path and health/stats surfaced in `status`; it is opt-in by default to avoid transport/browser mismatches.
+- High-trust login-host exclusions through `BRS_STEALTH_EXCLUDED_HOSTS`; Google, LinkedIn, JD, and GitHub are excluded from legacy JS stealth by default because spoofing can harm account login flows.
 
-This is compatibility infrastructure for legitimate real-browser agent work, not a promise that any platform will accept automation. Use noVNC for login, Captcha, slider, or account-safety handoff.
+This is compatibility infrastructure for legitimate real-browser agent work, not a promise that any platform will accept automation. Use noVNC for login, Captcha, slider, or account-safety handoff. For aggressive bot-detection sites, prefer persistent profiles, headed/noVNC use, matching locale/timezone/proxy geography, and browser-level identity consistency over page-level spoofing.
 Runtime upgrades preserve the persisted browser profile by default; set `BRS_RESET_PROFILE_ON_SIGNATURE_CHANGE=1` only when you intentionally want to wipe cookies/profile state after a signature change.
 
 ## Session probes
