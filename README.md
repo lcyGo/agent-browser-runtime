@@ -12,11 +12,9 @@ You must comply with applicable laws, platform terms, privacy rules, account-saf
 
 If a target requires login, consent, payment, Captcha, MFA, or another human/account-safety checkpoint, use manual handoff and respect the outcome.
 
-## License and commercial use
+## License
 
-Agent Browser Runtime is source-available under the PolyForm Noncommercial License 1.0.0. Noncommercial learning, research, experimentation, and responsible technical exploration are permitted under the license terms.
-
-Commercial use, resale, commercial hosted service use, paid product integration, or use primarily intended to support commercial activity requires a separate written commercial license from the repository owner or copyright holder.
+Agent Browser Runtime is open source under the Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 ## What is included
 
